@@ -425,10 +425,10 @@ void send_regs(int fd, const struct sensor_def *sensor, const struct sensor_regs
 				{
 					vcos_log_error("Failed to write register index %d (%02X val %02X)", i, regs[i].reg, regs[i].data);
 				}
-				else
-				{
-					printf("write register index %d (%02X val %04X)\n", i, regs[i].reg, regs[i].data);
-				}		
+				//else
+				//{
+				//	printf("write register index %d (%02X val %04X)\n", i, regs[i].reg, regs[i].data);
+				//}		
 			}
 			else
 			{
@@ -445,10 +445,10 @@ void send_regs(int fd, const struct sensor_def *sensor, const struct sensor_regs
 				{
 					vcos_log_error("Failed to write register index %d", i);
 				}
-				else
-				{
-					printf("write register index %d (%04X val %04X)\n", i, regs[i].reg, regs[i].data);
-				}		
+				//else
+				//{
+				//	printf("write register index %d (%04X val %04X)\n", i, regs[i].reg, regs[i].data);
+				//}		
 			}
 		}
 	}
