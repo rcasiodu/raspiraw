@@ -106,6 +106,7 @@ struct sensor_def
 	int num_stop_regs;
 
 	uint8_t i2c_addr;		// Device I2C slave address
+	/*I2C Mode*/
 	int i2c_addressing;		// Length of register address values
 	int i2c_data_size;		// Length of register data to write
 
@@ -139,8 +140,10 @@ struct sensor_def
 #include "ov5647_modes.h"
 #include "imx219_modes.h"
 #include "adv7282m_modes.h"
+#include "ov2311_modes.h"
 
 const struct sensor_def *sensors[] = {
+	&ov2311,
 	&ov5647,
 	&imx219,
 	&adv7282,
@@ -267,12 +270,12 @@ typedef struct {
 	char *write_headerg;
 	char *write_timestamps;
 	int write_empty;
-        PTS_NODE_T ptsa;
-        PTS_NODE_T ptso;
-        int decodemetadata;
-        int awb;
-        int no_preview;
-        int processing;
+    PTS_NODE_T ptsa;
+    PTS_NODE_T ptso;
+    int decodemetadata;
+    int awb;
+    int no_preview;
+    int processing;
 	int fullscreen;		// 0 is use previewRect, non-zero to use full screen
 	int opacity;		// Opacity of window - 0 = transparent, 255 = opaque
 	MMAL_RECT_T preview_window;	// Destination rectangle for the preview window.
@@ -284,18 +287,18 @@ typedef struct {
 typedef struct {
 	RASPIRAW_PARAMS_T *cfg;
 
-        MMAL_POOL_T *rawcam_pool;
-        MMAL_PORT_T *rawcam_output;
+    MMAL_POOL_T *rawcam_pool;
+    MMAL_PORT_T *rawcam_output;
 
-        MMAL_POOL_T *isp_ip_pool;
-        MMAL_PORT_T *isp_ip;
+    MMAL_POOL_T *isp_ip_pool;
+    MMAL_PORT_T *isp_ip;
 
-        MMAL_QUEUE_T *awb_queue;
-        int awb_thread_quit;
-        MMAL_PARAMETER_AWB_GAINS_T wb_gains;
+    MMAL_QUEUE_T *awb_queue;
+    int awb_thread_quit;
+    MMAL_PARAMETER_AWB_GAINS_T wb_gains;
 
-        MMAL_QUEUE_T *processing_queue;
-        int processing_thread_quit;
+    MMAL_QUEUE_T *processing_queue;
+    int processing_thread_quit;
 } RASPIRAW_CALLBACK_T;
 
 typedef struct {
@@ -341,7 +344,7 @@ static int i2c_rd(int fd, uint8_t i2c_addr, uint16_t reg, uint8_t *values, uint3
 	msgset.nmsgs = 2;
 
 	err = ioctl(fd, I2C_RDWR, &msgset);
-	//vcos_log_error("Read i2c addr %02X, reg %04X (len %d), value %02X, err %d", i2c_addr, msgs[0].buf[0], msgs[0].len, values[0], err);
+	printf("Read i2c addr %02X, reg %04X (len %d), value %02X, err %d", i2c_addr, msgs[0].buf[0], msgs[0].len, values[0], err);
 	if (err != (int)msgset.nmsgs)
 		return -1;
 
@@ -375,6 +378,12 @@ const struct sensor_def * probe_sensor(void)
 					vcos_log_error("Found sensor %s at address %02X", sensor->name, sensor->i2c_addr);
 					break;
 				}
+				else
+				{
+					printf("Find Sensor Id 0x%X but set is 0x%X", reg, sensor->i2c_ident_value);
+					//break;
+				}
+				
 			}
 		}
 		sensor_list++;
@@ -416,6 +425,10 @@ void send_regs(int fd, const struct sensor_def *sensor, const struct sensor_regs
 				{
 					vcos_log_error("Failed to write register index %d (%02X val %02X)", i, regs[i].reg, regs[i].data);
 				}
+				else
+				{
+					printf("write register index %d (%02X val %04X)\n", i, regs[i].reg, regs[i].data);
+				}		
 			}
 			else
 			{
@@ -432,6 +445,10 @@ void send_regs(int fd, const struct sensor_def *sensor, const struct sensor_regs
 				{
 					vcos_log_error("Failed to write register index %d", i);
 				}
+				else
+				{
+					printf("write register index %d (%04X val %04X)\n", i, regs[i].reg, regs[i].data);
+				}		
 			}
 		}
 	}
@@ -505,7 +522,6 @@ void decodemetadataline(uint8_t *data, int bpp)
 
 	if (data[0]==0x0a)
 	{
-
 		while (data[c]!=0x07)
 		{
 			tag=data[c++];
@@ -573,7 +589,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	//vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
 	if (cfg->capture)
 	{
-
+		vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
 		if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO) &&
                     (((count++)%cfg->saverate)==0))
 		{
@@ -597,6 +613,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 					{
 						if (cfg->write_header)
 							fwrite(brcm_header, BRCM_RAW_HEADER_LENGTH, 1, file);
+						printf("buffer length: %d\n", buffer->length);
 						fwrite(buffer->user_data, buffer->length, 1, file);
 					}
 					fclose(file);
@@ -1472,8 +1489,8 @@ int main(int argc, char** argv) {
 	cfg.opacity = 255;
 	cfg.fullscreen = 1;
 
-	bcm_host_init();
-	vcos_log_register("RaspiRaw", VCOS_LOG_CATEGORY);
+	bcm_host_init();									//firmware/opt/vc
+	vcos_log_register("RaspiRaw", VCOS_LOG_CATEGORY);	//firmware/opt/vc
 
 	if (argc == 1)
 	{
@@ -1707,6 +1724,13 @@ int main(int argc, char** argv) {
 		vcos_log_error("Failed to set zero copy");
 		goto component_disable;
 	}
+	/*isp module*/
+	status = mmal_port_parameter_set_uint32(isp->input[0], MMAL_PARAMETER_CAMERA_ISP_BLOCK_OVERRIDE, ~(1<<11));
+    if (status != MMAL_SUCCESS)
+    {`
+       vcos_log_error("Could not set block override - update your firmware : error %d", status);
+    }	
+
 
 	status = mmal_component_create(MMAL_COMPONENT_DEFAULT_VIDEO_RENDERER, &render);
 	if (status != MMAL_SUCCESS)
@@ -1750,7 +1774,7 @@ int main(int argc, char** argv) {
 				rx_cfg.unpack = MMAL_CAMERA_RX_CONFIG_UNPACK_12;
 				break;
 			case 14:
-				rx_cfg.unpack = MMAL_CAMERA_RX_CONFIG_UNPACK_16;
+				rx_cfg.unpack = MMAL_CAMERA_RX_CONFIG_UNPACK_14;
 				break;
 			case 16:
 				rx_cfg.unpack = MMAL_CAMERA_RX_CONFIG_UNPACK_16;
@@ -1788,6 +1812,7 @@ int main(int argc, char** argv) {
 		rx_cfg.data_lanes = sensor_mode->data_lanes;
 	if (sensor_mode->image_id)
 		rx_cfg.image_id = sensor_mode->image_id;
+	printf("image id=%d\n", rx_cfg.image_id);
 	status = mmal_port_parameter_set(output, &rx_cfg.hdr);
 	if (status != MMAL_SUCCESS)
 	{
