@@ -596,7 +596,7 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	//vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
 	if (cfg->capture)
 	{
-		if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
+		if ((buffer->flags == 0x04) && count!=0)
 		{
 			//end = clock();
 			//cpu_time_used = ((double) (end - start))*1000 / CLOCKS_PER_SEC;
