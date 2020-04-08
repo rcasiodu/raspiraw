@@ -588,11 +588,6 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	static int count = 0;
  	double cpu_time_used;
 
-	end = clock();
-	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-	start = clock();
-	printf("frame time=%f\n", cpu_time_used);
-
 	RASPIRAW_CALLBACK_T *dev = (RASPIRAW_CALLBACK_T*)port->userdata;
 	RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)dev->cfg;
 	MMAL_STATUS_T status;
@@ -600,8 +595,16 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	//vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
 	if (cfg->capture)
 	{
+		if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
+		{
+			end = clock();
+			cpu_time_used = ((double) (end - start))*1000 / CLOCKS_PER_SEC;
+			start = clock();
+			printf("frame time=%f ms\n", cpu_time_used);
+
+			vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
+		}
 		
-		vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
 		if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO) &&
                     (((count++)%cfg->saverate)==0) && (cfg->saverate!=-1))
 		{
