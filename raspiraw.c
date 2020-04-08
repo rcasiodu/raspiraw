@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
@@ -579,9 +580,19 @@ static void buffers_to_rawcam(RASPIRAW_CALLBACK_T *dev)
 	}
 }
 
+//if saverate==-1 donot save rawdata
+static clock_t start = 0;
+static clock_t end = 0;
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
+ 	double cpu_time_used;
+
+	end = clock();
+	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+	start = clock();
+	printf("frame time=%f\n", cpu_time_used);
+
 	RASPIRAW_CALLBACK_T *dev = (RASPIRAW_CALLBACK_T*)port->userdata;
 	RASPIRAW_PARAMS_T *cfg = (RASPIRAW_PARAMS_T *)dev->cfg;
 	MMAL_STATUS_T status;
@@ -589,9 +600,10 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	//vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
 	if (cfg->capture)
 	{
+		
 		vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
 		if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO) &&
-                    (((count++)%cfg->saverate)==0))
+                    (((count++)%cfg->saverate)==0) && (cfg->saverate!=-1))
 		{
 			// Save every Nth frame
 			// SD card access is too slow to do much more.
@@ -1727,7 +1739,7 @@ int main(int argc, char** argv) {
 	/*isp module*/
 	status = mmal_port_parameter_set_uint32(isp->input[0], MMAL_PARAMETER_CAMERA_ISP_BLOCK_OVERRIDE, ~(1<<11));
     if (status != MMAL_SUCCESS)
-    {`
+    {
        vcos_log_error("Could not set block override - update your firmware : error %d", status);
     }	
 
@@ -2243,6 +2255,7 @@ int main(int argc, char** argv) {
 
 	start_camera_streaming(sensor, sensor_mode);
 
+	start = clock();
 	vcos_sleep(cfg.timeout);
 
 	stop_camera_streaming(sensor);
