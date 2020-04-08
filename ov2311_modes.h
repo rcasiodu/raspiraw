@@ -7,26 +7,27 @@ OV2311
 
 struct sensor_regs ov2311_2MPix[] =
 {
-	
-}
+	{0x0100, 0x00},
+	{0x0100, 0x01},	
+};
 
 #define addreg(a, b) { a, b }
 
 /*1600X1300*/
 struct sensor_regs ov2311_mode1[] =
 {
-	
-}
+		
+};
 /*1280X720*/
 struct sensor_regs ov2311_mode2[] =
 {
 	
-}
+};
 /*6400X480*/
 struct sensor_regs ov2311_mode3[] =
 {
-	
-}
+		
+};
 struct mode_def ov2311_modes[] = {
    {
       .regs          = ov2311_2MPix,
