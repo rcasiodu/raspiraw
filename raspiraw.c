@@ -583,6 +583,7 @@ static void buffers_to_rawcam(RASPIRAW_CALLBACK_T *dev)
 //if saverate==-1 donot save rawdata
 static clock_t start = 0;
 static clock_t end = 0;
+static timestamp=0;
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
@@ -597,10 +598,12 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 	{
 		if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO))
 		{
-			end = clock();
-			cpu_time_used = ((double) (end - start))*1000 / CLOCKS_PER_SEC;
-			start = clock();
-			printf("frame time=%f ms\n", cpu_time_used);
+			//end = clock();
+			//cpu_time_used = ((double) (end - start))*1000 / CLOCKS_PER_SEC;
+			//start = clock();
+			//printf("frame time=%f ms\n", cpu_time_used);
+			printf("frame time=%f ms\n", (buffer->pts-timestamp)/1000.0);
+			timestamp = buffer->pts;
 
 			vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
 		}
