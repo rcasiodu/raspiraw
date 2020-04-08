@@ -583,7 +583,7 @@ static void buffers_to_rawcam(RASPIRAW_CALLBACK_T *dev)
 //if saverate==-1 donot save rawdata
 static clock_t start = 0;
 static clock_t end = 0;
-static timestamp=0;
+static unsigned long int timestamp=0;
 static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	static int count = 0;
