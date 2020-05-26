@@ -345,7 +345,7 @@ static int i2c_rd(int fd, uint8_t i2c_addr, uint16_t reg, uint8_t *values, uint3
 	msgset.nmsgs = 2;
 
 	err = ioctl(fd, I2C_RDWR, &msgset);
-	vcos_log_error("Read i2c addr %02X, reg %04X (len %d), value %02X, err %d\n", i2c_addr, msgs[0].buf[0], msgs[0].len, values[0], err);
+	vcos_log_error("Read i2c addr %02X, reg %04X (len %d), value %02X, err %d", i2c_addr, msgs[0].buf[0], msgs[0].len, values[0], err);
 	if (err != (int)msgset.nmsgs)
 		return -1;
 
@@ -602,13 +602,13 @@ static void callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 			//cpu_time_used = ((double) (end - start))*1000 / CLOCKS_PER_SEC;
 			//start = clock();
 			//printf("frame time=%f ms\n", cpu_time_used);
-			vcos_log_error("frame time=%f ms\n", (buffer->pts-timestamp)/1000.0);
+			vcos_log_error("frame time=%f ms", (buffer->pts-timestamp)/1000.0);
 			timestamp = buffer->pts;
 
 			vcos_log_error("Buffer %p returned, filled %d, timestamp %llu, flags %04X", buffer, buffer->length, buffer->pts, buffer->flags);
 		}
 		
-		if (!(buffer->flags&MMAL_BUFFER_HEADER_FLAG_CODECSIDEINFO) &&
+		if ((buffer->flags == 0x04) &&
                     (((count++)%cfg->saverate)==0) && (cfg->saverate!=-1))
 		{
 			// Save every Nth frame
@@ -1723,7 +1723,6 @@ int main(int argc, char** argv) {
 		goto component_disable;
 	}
 
-
 	status = mmal_component_create("vc.ril.isp", &isp);
 	if (status != MMAL_SUCCESS)
 	{
@@ -2117,7 +2116,6 @@ int main(int argc, char** argv) {
 		vcos_log_error("Failed to enable isp ip port");
 		goto pool_destroy;
 	}
-
 
 	//Set up YUV/RGB processing outputs
 	yuv_pool = mmal_port_pool_create(isp->output[0], isp->output[0]->buffer_num, 0);
